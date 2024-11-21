@@ -1,50 +1,58 @@
 package org.example.thuan_security.controller;
 
-import org.example.thuan_security.request.LoginRequest;
-import org.example.thuan_security.request.RegisterRequest;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import org.example.thuan_security.config.JwtAuthenticationFilter;
+import org.example.thuan_security.config.JwtTokenProvider;
+import org.example.thuan_security.request.ChangePasswordRequest;
 import org.example.thuan_security.response.ApiResponse;
-import org.example.thuan_security.response.LoginResponse;
+import org.example.thuan_security.response.UserResponse;
 import org.example.thuan_security.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-@RestController
-@RequestMapping("/api/auth")
-public class UserController {
+import java.util.List;
 
+@RestController
+@RequestMapping("/api")
+@RequiredArgsConstructor
+public class UserController {
     @Autowired
     private UserService userService;
+    @Autowired
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
 
-    /**
-     * API Login
-     */
-    @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) {
-        LoginResponse response = userService.login(loginRequest);
+    @GetMapping("/user")
+    public ResponseEntity<UserResponse> getUserInfo(HttpServletRequest request) {
+        String token = jwtAuthenticationFilter.getTokenFromRequest(request);
 
-        if ("200".equals(response.getCode())) {
-            return ResponseEntity.ok(response);
-        } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        if (token == null) {
+            throw new RuntimeException("Missing or invalid Authorization token");
+        }
+
+        UserResponse response = userService.getUserInfo(token);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/changePassword")
+    public ApiResponse changePassword(HttpServletRequest request, @RequestBody ChangePasswordRequest changePasswordRequest) {
+        try {
+            String token = jwtAuthenticationFilter.getTokenFromRequest(request);
+            String email = jwtTokenProvider.extractClaims(token);
+            return userService.changePassword(changePasswordRequest, email);
+        } catch (Exception e) {
+            return new ApiResponse<>(401,"Wrong current password",0, List.of(""));
         }
     }
 
-    /**
-     * API Register
-     */
-    @PostMapping("/register")
-    public ResponseEntity<ApiResponse> register(@RequestBody RegisterRequest registerRequest) {
-        ApiResponse response = userService.register(registerRequest);
-
-        if (response.getStatus() == 200) {
-            return ResponseEntity.ok(response);
-        } else if (response.getStatus() == 409) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
-        } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-        }
+    @GetMapping("/admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String admin() {
+        return "admin" ;
     }
 }
-

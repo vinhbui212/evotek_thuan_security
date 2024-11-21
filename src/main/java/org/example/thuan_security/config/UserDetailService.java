@@ -3,6 +3,7 @@ package org.example.thuan_security.config;
 import lombok.AllArgsConstructor;
 import lombok.Setter;
 import org.example.thuan_security.model.Users;
+import org.example.thuan_security.repository.RoleRepository;
 import org.example.thuan_security.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
@@ -19,15 +20,17 @@ import java.util.stream.Collectors;
 public class UserDetailService implements org.springframework.security.core.userdetails.UserDetailsService {
     @Autowired
     UserRepository userRepository;
-
+    @Autowired
+    RoleRepository roleRepository;
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         Users user = userRepository.findByEmail(email);
         if (user == null) {
             throw new UsernameNotFoundException("User not found with username: " + email);
         }
+
         Set<GrantedAuthority> authorities = user.getRoles().stream()
-                .map((roles) -> new SimpleGrantedAuthority(roles.getName()))
+                .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toSet());
         return new User(email, user.getPassword(), authorities);
     }

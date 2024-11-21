@@ -3,6 +3,7 @@ package org.example.thuan_security.config;
 import io.jsonwebtoken.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.thuan_security.model.Roles;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.security.core.Authentication;
@@ -54,11 +55,15 @@ public class JwtTokenProvider {
     public String createToken(Authentication authentication, String email) {
         long now = Instant.now().toEpochMilli();
         Date validity = new Date(now + EXPIRATION_TIME);
-        List<String> roles=authentication.getAuthorities().stream().map(item->item.getAuthority()).toList();
+
+        List<String> roles=authentication.getAuthorities().stream().map(
+                item->item.getAuthority()).toList();
+        String role= roles.get(0);
+        log.info(role);
         return Jwts.builder()
                 .setSubject(authentication.getName())
                 .claim("email", email)
-                .claim("role", roles)
+                .claim("role", role)
                 .signWith(SignatureAlgorithm.RS256, keyPair.getPrivate())
                 .setIssuedAt(new Date(now))
                 .setExpiration(validity)
@@ -67,9 +72,13 @@ public class JwtTokenProvider {
 
     public boolean validateToken(String authToken) {
         try {
-            Jwts.parser()
+            Claims claims = Jwts.parser()
                     .setSigningKey(keyPair.getPublic())
-                    .parseClaimsJws(authToken);
+                    .parseClaimsJws(authToken)
+                    .getBody();
+
+            log.info("Claims: {}", claims);
+
             return true;
         } catch (MalformedJwtException e) {
             log.error("Invalid JWT token: {}", e.getMessage());
@@ -92,6 +101,7 @@ public class JwtTokenProvider {
                 .getBody();
         return claims.getSubject();
     }
+
     public LocalDateTime extractExpiration(String token) {
         Claims claims= Jwts.parser()
                 .setSigningKey(keyPair.getPublic())
@@ -99,6 +109,7 @@ public class JwtTokenProvider {
                 .getBody();
         return claims.getExpiration().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
     }
+
     public String extractRole(String token) {
         Claims claims=Jwts.parser()
                 .setSigningKey(keyPair.getPublic())

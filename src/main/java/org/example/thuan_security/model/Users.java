@@ -8,6 +8,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -25,13 +26,9 @@ public class Users implements UserDetails {
     private String email;
     private String password;
     private String fullName;
-    @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-    @JoinTable(name = "users_roles",
-            joinColumns = @JoinColumn(name = "users_id", referencedColumnName = "pk_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id", referencedColumnName = "pk_id")
-    )
-    private Set<Roles> roles;
-
+    private boolean verified = false;
+    private Set<String> roles=new HashSet<>();
+    private String image_url;
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of();
