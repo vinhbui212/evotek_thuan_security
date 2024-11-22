@@ -13,8 +13,10 @@ public interface UserService {
     LoginResponse validateLoginWithOtp(String email, String otp);
 
     ApiResponse register(RegisterRequest registerRequest);
+
     UserResponse getUserInfo(String token);
-    UserResponse updateUserInfo(String token, UserResponse userResponse);
+
+    ApiResponse updateUserInfo(String token, UserResponse userResponse);
 
     boolean isVerifiedAccount(String email);
 

@@ -1,8 +1,12 @@
 package org.example.thuan_security.service.impl;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.thuan_security.config.JwtTokenProvider;
+import org.example.thuan_security.controller.FileUploadController;
 import org.example.thuan_security.model.Roles;
 import org.example.thuan_security.model.Users;
 import org.example.thuan_security.repository.RoleRepository;
@@ -15,17 +19,26 @@ import org.example.thuan_security.response.LoginResponse;
 import org.example.thuan_security.response.RegisterResponseDTO;
 import org.example.thuan_security.response.UserResponse;
 import org.example.thuan_security.service.EmailService;
+import org.example.thuan_security.service.RefreshTokenService;
 import org.example.thuan_security.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 @Component
 @Slf4j
@@ -43,19 +56,27 @@ public class UserServiceImpl implements UserService {
     private JwtTokenProvider jwtTokenProvider;
     @Autowired
     private EmailService emailService;
-    private final Map<String, String> otpLoginStorage = new HashMap<>();
-    private final Map<String, String> otpStorage = new HashMap<>();
+    @Autowired
+    private RefreshTokenService refreshTokenService;
+    private final Map<String, String> tokenStorage = new HashMap<>();
+    private final Cache<String, String> otpCache = CacheBuilder.newBuilder()
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .build();
+
+
+    @Autowired
+    private FileUploadController fileUploadController;
 
     @Override
     public LoginResponse login(LoginRequest loginRequest) {
         try {
             Users user = userRepository.findByEmail(loginRequest.getEmail());
             if (user == null) {
-                return new LoginResponse("404", "User not found", "", null);
+                return new LoginResponse("404", "User not found", "",null);
             }
 
             if (!user.isVerified()) {
-                return new LoginResponse("403", "Account not verified. Please verify your account.", "", null);
+                return new LoginResponse("403", "Account not verified. Please verify your account.", "",null);
             }
 
             Authentication authentication = authenticationManager.authenticate(
@@ -68,22 +89,24 @@ public class UserServiceImpl implements UserService {
 
 
                 String otp = generateOTP();
-                otpLoginStorage.put(email, otp);
+                otpCache.put(email, otp);
+                otpCache.asMap().forEach((key, value) -> {
+                    System.out.println("Key: " + key + ", Value: " + value);
+                });
                 emailService.sendMail(email, "Your OTP Code", "Your OTP code is: " + otp);
 
-                return new LoginResponse("202", "OTP sent to email. Please verify.", null, null);
+                return new LoginResponse("202", "OTP sent to email. Please verify.", null,null);
             }
         } catch (Exception e) {
-            return new LoginResponse("401", "Wrong email or password", "", null);
+            return new LoginResponse("401", "Wrong email or password", "",null);
         }
 
-        return new LoginResponse("401", "Wrong email or password", "", null);
+        return new LoginResponse("401", "Wrong email or password", "",null);
     }
     @Override
     public LoginResponse validateLoginWithOtp(String email, String otp) {
-        if (otpLoginStorage.containsKey(email) && otpLoginStorage.get(email).equals(otp)) {
-            otpLoginStorage.remove(email);
-
+        if (validateOtp(email,otp)) {
+            deleteOtp(email);
             Users user = userRepository.findByEmail(email);
             if (user != null) {
                 List<SimpleGrantedAuthority> authorities = user.getRoles().stream()
@@ -92,13 +115,14 @@ public class UserServiceImpl implements UserService {
 
                 String token = jwtTokenProvider.createToken(
                         new UsernamePasswordAuthenticationToken(email, null, authorities),
-                        email
-                );
+                        email);
+//                String rftoken=refreshTokenService.createRefreshToken(email);
+
                 LocalDateTime expiration = jwtTokenProvider.extractExpiration(token);
 
                 return new LoginResponse("200", "Login successful", token, expiration);
             } else {
-                return new LoginResponse("404", "User not found", "", null);
+                return new LoginResponse("404", "User not found", "",null);
             }
         } else {
             return new LoginResponse("401", "Invalid or expired OTP", "", null);
@@ -171,15 +195,25 @@ public class UserServiceImpl implements UserService {
             userResponse.setEmail(email);
             userResponse.setRole(role);
             userResponse.setFullName(user.getFullName());
-            userResponse.setPassword(user.getPassword());
+            userResponse.setImgUrl(user.getImage_url());
 
             return userResponse;
 
         }
 
     @Override
-    public UserResponse updateUserInfo(String token, UserResponse userResponse) {
-        return null;
+    public ApiResponse updateUserInfo(String token, UserResponse userResponse) {
+        String email = jwtTokenProvider.extractClaims(token);
+        try {
+            Users users = userRepository.findByEmail(email);
+            users.setFullName(userResponse.getFullName());
+            userRepository.save(users);
+            ApiResponse apiResponse = new ApiResponse<>(200, "Updated", 1, null);
+            return apiResponse;
+        } catch (Exception e) {
+                return new ApiResponse<>(404, "Empty name", 0, null);
+
+        }
     }
 
     @Override
@@ -213,28 +247,40 @@ public class UserServiceImpl implements UserService {
     @Override
     public ApiResponse sendMailForgotPassword(String email) {
         Users user = userRepository.findByEmail(email);
-        if(user != null){
 
-            String otp = generateOTP();
-            otpStorage.put(email, otp);
+        if (user != null) {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+            String token = jwtTokenProvider.createToken(authentication, email);
+
+            tokenStorage.put(email, token);
+
 
             String subject = "Reset Your Password";
-            String message = "Your OTP for resetting password is: " + otp + "\nThis OTP will expire in 5 minutes.";
+            String resetLink = "http://localhost:8080/api/users/reset-password?token=" + token;
+            String message = "Dear " + user.getFullName() + ",\n\n" +
+                    "We received a request to reset your password. Please click the link below to reset it:\n" +
+                    resetLink + "\n\n"
+                    +
+                    "This link will expire in 30 minutes.\n\n" +
+                    "If you did not request a password reset, please ignore this email.\n\n" +
+                    "Best regards,\nYour Team";
+
 
             emailService.sendMail(email, subject, message);
 
-            log.info("OTP sent to email: {}", email);
+            log.info("Reset password link sent to email: {}", email);
 
-            return new ApiResponse<>(200, "Link to reset your pass is sent to email.", 1, List.of(""));
-
+            return new ApiResponse<>(200, "Link to reset your password has been sent to your email.", 1, List.of(""));
         }
-        return new ApiResponse<>(401,"Cant not found email",0,List.of(""));
 
+        return new ApiResponse<>(401, "Cannot find user with this email", 0, List.of(""));
     }
 
+
     @Override
-    public ApiResponse changeForgotPassword(String email, String otp, String newPassword) {
-        if (isValidOTP(email, otp)) {
+    public ApiResponse changeForgotPassword(String email, String token, String newPassword) {
+        if (isValidOTP(email, token)) {
             Users user = userRepository.findByEmail(email);
             user.setPassword(passwordEncoder.encode(newPassword));
             userRepository.save(user);
@@ -246,16 +292,31 @@ public class UserServiceImpl implements UserService {
         return new ApiResponse<>(401,"Wrong OTP",0,List.of(""));
     }
 
+
     public String generateOTP() {
         Random random = new Random();
         int otp = 100000 + random.nextInt(900000);
         return String.valueOf(otp);
     }
 
+    public String generateRefreshToken(String token){
+        return UUID.randomUUID().toString();
+    }
+
+    public boolean validateOtp(String key, String inputOtp) {
+        String cachedOtp = otpCache.getIfPresent(key);
+        return cachedOtp != null && cachedOtp.equals(inputOtp);
+    }
+
+    // Xóa OTP sau khi dùng hoặc không còn hiệu lực
+    public void deleteOtp(String key) {
+        otpCache.invalidate(key);
+    }
+
 
     public boolean isValidOTP(String email, String otp) {
-        if (otpStorage.containsKey(email) && otpStorage.get(email).equals(otp)) {
-            otpStorage.remove(email);
+        if (tokenStorage.containsKey(email) && tokenStorage.get(email).equals(otp)) {
+            tokenStorage.remove(email);
             return true;
         }
         return false;
