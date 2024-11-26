@@ -5,6 +5,7 @@ import com.google.common.cache.CacheBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.UUID;
 
@@ -12,13 +13,13 @@ import java.util.UUID;
 @Service
 public class RefreshTokenService {
 
-    private final Cache<String, String> refreshTokenCache = CacheBuilder.newBuilder()
+    private static final Cache<String, String> refreshTokenCache = CacheBuilder.newBuilder()
             .expireAfterWrite(7, TimeUnit.DAYS)
             .build();
 
     public String createRefreshToken(String email) {
         String refreshToken = UUID.randomUUID().toString();
-        refreshTokenCache.put(email, refreshToken);
+        refreshTokenCache.put(refreshToken, email);
         refreshTokenCache.asMap().forEach((key, value) -> {
             System.out.println("Key: " + key + ", Value: " + value);
         });
@@ -36,7 +37,14 @@ public class RefreshTokenService {
     }
 
 
-    public void deleteRefreshToken(String refreshToken) {
-        refreshTokenCache.invalidate(refreshToken);
+    public void deleteRefreshToken(String email) {
+        refreshTokenCache.asMap().entrySet().stream()
+                .filter(entry -> entry.getValue().equals(email))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .ifPresent(refreshTokenCache::invalidate);
     }
+
+
+
 }

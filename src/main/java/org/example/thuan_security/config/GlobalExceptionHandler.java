@@ -1,4 +1,4 @@
-package org.example.thuan_security.controller;
+package org.example.thuan_security.config;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

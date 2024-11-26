@@ -72,11 +72,11 @@ public class UserServiceImpl implements UserService {
         try {
             Users user = userRepository.findByEmail(loginRequest.getEmail());
             if (user == null) {
-                return new LoginResponse("404", "User not found", "",null);
+                return new LoginResponse("404", "User not found", "",null,null);
             }
 
             if (!user.isVerified()) {
-                return new LoginResponse("403", "Account not verified. Please verify your account.", "",null);
+                return new LoginResponse("403", "Account not verified. Please verify your account.", "",null,null);
             }
 
             Authentication authentication = authenticationManager.authenticate(
@@ -95,13 +95,13 @@ public class UserServiceImpl implements UserService {
                 });
                 emailService.sendMail(email, "Your OTP Code", "Your OTP code is: " + otp);
 
-                return new LoginResponse("202", "OTP sent to email. Please verify.", null,null);
+                return new LoginResponse("202", "OTP sent to email. Please verify.", null,null,null);
             }
         } catch (Exception e) {
-            return new LoginResponse("401", "Wrong email or password", "",null);
+            return new LoginResponse("401", "Wrong email or password", "",null,null);
         }
 
-        return new LoginResponse("401", "Wrong email or password", "",null);
+        return new LoginResponse("401", "Wrong email or password", "",null,null);
     }
     @Override
     public LoginResponse validateLoginWithOtp(String email, String otp) {
@@ -116,16 +116,17 @@ public class UserServiceImpl implements UserService {
                 String token = jwtTokenProvider.createToken(
                         new UsernamePasswordAuthenticationToken(email, null, authorities),
                         email);
-//                String rftoken=refreshTokenService.createRefreshToken(email);
+
+                String rftoken=refreshTokenService.createRefreshToken(email);
 
                 LocalDateTime expiration = jwtTokenProvider.extractExpiration(token);
 
-                return new LoginResponse("200", "Login successful", token, expiration);
+                return new LoginResponse("200", "Login successful", token,rftoken, expiration);
             } else {
-                return new LoginResponse("404", "User not found", "",null);
+                return new LoginResponse("404", "User not found", "",null,null);
             }
         } else {
-            return new LoginResponse("401", "Invalid or expired OTP", "", null);
+            return new LoginResponse("401", "Invalid or expired OTP", "", null,null);
         }
     }
 

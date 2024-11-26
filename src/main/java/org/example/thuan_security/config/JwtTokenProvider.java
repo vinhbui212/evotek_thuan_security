@@ -1,10 +1,12 @@
 package org.example.thuan_security.config;
 
 import io.jsonwebtoken.*;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.thuan_security.model.Roles;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.encrypt.KeyStoreKeyFactory;
@@ -23,15 +25,26 @@ import java.util.List;
 @Service
 @Slf4j
 public class JwtTokenProvider {
+    @Value("${keystore.file}")
+    private String keyStore;
+    @Value("${keystore.password}")
+    private String password;
+    @Value("${keystore.alias}")
+    private String alias;
 
-    private String keyStore = "keystore.jks";
-    private String password = "123456";
-    private String alias = "vinhkey1";
     private KeyPair keyPair;
-    private final int EXPIRATION_TIME = 300000;
 
-    public JwtTokenProvider() {
-        keyPair = keyPair(keyStore, password, alias);
+    @Value("${jwt.expiration.time}")
+    private  int EXPIRATION_TIME;
+
+    @PostConstruct
+    public void JwtTokenProvider() {
+        try {
+            keyPair = keyPair(keyStore, password, alias);
+        } catch (Exception e) {
+            log.error("Error initializing KeyPair: {}", e.getMessage());
+            throw new IllegalStateException("Unable to initialize KeyPair", e);
+        }
     }
 
     private KeyPair keyPair(String keyStore, String keyStorePassword, String alias) {
