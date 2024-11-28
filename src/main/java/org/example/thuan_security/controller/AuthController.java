@@ -6,18 +6,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.thuan_security.config.JwtTokenProvider;
 import org.example.thuan_security.model.Users;
+import org.example.thuan_security.repository.RegisterStrategy;
 import org.example.thuan_security.repository.UserRepository;
 import org.example.thuan_security.request.LoginRequest;
 import org.example.thuan_security.request.RefreshTokenRequest;
 import org.example.thuan_security.request.RegisterRequest;
-import org.example.thuan_security.response.ApiResponse;
-import org.example.thuan_security.response.LoginResponse;
-import org.example.thuan_security.response.TokenResponse;
-import org.example.thuan_security.service.BlackListService;
-import org.example.thuan_security.service.RefreshTokenService;
-import org.example.thuan_security.service.UserActivityLogService;
-import org.example.thuan_security.service.UserService;
+import org.example.thuan_security.response.*;
+import org.example.thuan_security.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -51,20 +48,14 @@ public class AuthController {
     @Autowired
     private UserRepository userRepository;
 
-    @PostMapping("/register")
-    public ResponseEntity<ApiResponse> register(@Valid @RequestBody RegisterRequest registerRequest, HttpServletRequest request) throws Exception {
-        ApiResponse response = userService.register(registerRequest);
 
-        if (response != null && String.valueOf(HttpStatus.OK.value()).equals(response.getCode())) {
-            String ipAddress = convertTov4(request.getRemoteAddr());
-            LocalDateTime localDateTime = LocalDateTime.now();
-            logService.logActivity(registerRequest.getEmail(), String.valueOf(REGISTER), ipAddress, localDateTime);
-            return ResponseEntity.status(HttpStatus.OK).body(response);
-        } else if (response != null && String.valueOf(HttpStatus.CONFLICT.value()).equals(response.getCode())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
-        } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-        }
+    private final RegisterFactory registerFactory;
+
+    @PostMapping("/register")
+    public UserKCLResponse register(@RequestBody RegisterRequest registerRequest) throws Exception {
+        RegisterStrategy loginStrategy = registerFactory.getLoginStrategy();
+        log.info(loginStrategy.toString());
+        return loginStrategy.register(registerRequest);
     }
 
     @PostMapping("/login")

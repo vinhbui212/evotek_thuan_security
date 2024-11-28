@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.thuan_security.config.JwtAuthenticationFilter;
 import org.example.thuan_security.config.JwtTokenProvider;
 import org.example.thuan_security.request.ChangePasswordRequest;
+import org.example.thuan_security.request.RegisterRequest;
 import org.example.thuan_security.response.ApiResponse;
 import org.example.thuan_security.response.UserResponse;
 import org.example.thuan_security.service.UserActivityLogService;
@@ -14,6 +15,9 @@ import org.example.thuan_security.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -74,8 +78,25 @@ public class UserController {
     }
 
     @GetMapping("/admin")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasPermission(null, 'READ')")
     public String admin() {
-        return "admin" ;
+        return "admin";
+    }
+
+
+    @PostMapping("user")
+    public String createUser(@RequestBody RegisterRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof Jwt) {
+            Jwt jwt = (Jwt) principal;
+            String username = jwt.getClaimAsString("preferred_username");
+            String email = jwt.getClaimAsString("email");
+            log.info("Username: " + username);
+            log.info("Email: " + email);
+        } else {
+            log.info("Principal is not of type Jwt: " + principal.toString());
+        }
+        return userService.createUser(request);
     }
 }

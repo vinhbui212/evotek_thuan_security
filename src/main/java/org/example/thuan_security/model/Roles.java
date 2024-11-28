@@ -6,7 +6,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 @Entity
 @Data
@@ -21,6 +23,7 @@ public class Roles extends AuditableEntity implements GrantedAuthority {
     private long id;
     @Column(name = "name",unique = true)
     private String name;
+    private Set<String> permissions;
 
     @Override
     public String getAuthority() {
