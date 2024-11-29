@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Permissions {
+public class Permissions extends AuditableEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

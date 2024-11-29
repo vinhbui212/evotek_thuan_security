@@ -20,8 +20,8 @@ public class RoleController {
     private final RoleService roleService;
 
     @PostMapping
-    public ResponseEntity<Roles> createRole(@RequestParam String name, @RequestParam String description) {
-        Roles role = roleService.createRole(name, description);
+    public ResponseEntity<Roles> createRole(@RequestParam String name) {
+        Roles role = roleService.createRole(name);
         return ResponseEntity.status(HttpStatus.CREATED).body(role);
     }
 
@@ -45,6 +45,13 @@ public class RoleController {
         return ResponseEntity.ok("Permission assigned to role successfully");
     }
 
+    @PostMapping("/{userId}/roles/{roleId}")
+    public ResponseEntity<String> assignRoletoUser(
+            @PathVariable Long userId,
+            @PathVariable Long roleId) {
+        roleService.assignRoleToUser(userId, roleId);
+        return ResponseEntity.ok("Rol assigned to role successfully");
+    }
 }
 
 

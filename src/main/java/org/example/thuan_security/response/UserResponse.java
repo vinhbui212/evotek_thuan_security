@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 public class UserResponse {
     @NotBlank(message = "Full name cannot be null or empty")
     String fullName;
+    String lastName;
+    String firstName;
     String email;
     String role;
     String imgUrl;

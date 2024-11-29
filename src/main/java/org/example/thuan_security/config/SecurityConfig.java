@@ -45,7 +45,7 @@ public class SecurityConfig {
     }
 
     private final String[] KEYCLOAK_ENDPOINTS = {"/api/keycloak/register"};
-    private final String[] PUBLIC_ENDPOINTS = {"/api/auth/**","/api/roles/**","/api/permissions/**"};
+    private final String[] PUBLIC_ENDPOINTS = {"/api/auth/**","/api/roles/**","/api/permissions/**","api/**"};
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {

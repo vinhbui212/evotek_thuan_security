@@ -7,14 +7,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.example.thuan_security.request.RegisterRequest;
-import org.example.thuan_security.request.RegisterRequestKCL;
-import org.example.thuan_security.response.ApiResponse;
-import org.example.thuan_security.response.ApiResponse1;
 import org.example.thuan_security.response.UserKCLResponse;
-import org.example.thuan_security.service.UserKCLService;
+import org.example.thuan_security.service.keycloak.UserKCLService;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor

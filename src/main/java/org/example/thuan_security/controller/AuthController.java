@@ -1,26 +1,25 @@
 package org.example.thuan_security.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.thuan_security.config.JwtTokenProvider;
 import org.example.thuan_security.model.Users;
-import org.example.thuan_security.repository.RegisterStrategy;
+import org.example.thuan_security.request.ResetPasswordRequest;
+import org.example.thuan_security.service.factory.RegisterStrategy;
 import org.example.thuan_security.repository.UserRepository;
 import org.example.thuan_security.request.LoginRequest;
 import org.example.thuan_security.request.RefreshTokenRequest;
 import org.example.thuan_security.request.RegisterRequest;
 import org.example.thuan_security.response.*;
 import org.example.thuan_security.service.*;
+import org.example.thuan_security.service.factory.ResetPasswordStrategy;
+import org.example.thuan_security.service.user.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -47,7 +46,8 @@ public class AuthController {
     private RefreshTokenService refreshTokenService;
     @Autowired
     private UserRepository userRepository;
-
+    @Autowired
+    private ResetPasswordStrategy resetPasswordStrategy;
 
     private final RegisterFactory registerFactory;
 
@@ -138,6 +138,10 @@ public class AuthController {
         }
         return ResponseEntity.status(401).body("Invalid or expired refresh token");
 
+    }
+    @PostMapping("/{id}/reset-password")
+    public String resetPassword(@PathVariable String id,@RequestBody ResetPasswordRequest resetPasswordRequest)  {
+        return resetPasswordStrategy.resetPassword(id,resetPasswordRequest);
     }
 }
 

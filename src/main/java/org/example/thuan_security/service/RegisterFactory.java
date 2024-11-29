@@ -2,7 +2,7 @@ package org.example.thuan_security.service;
 
 import lombok.RequiredArgsConstructor;
 import org.example.thuan_security.model.LoginType;
-import org.example.thuan_security.repository.RegisterStrategy;
+import org.example.thuan_security.service.factory.RegisterStrategy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 

@@ -20,7 +20,7 @@ public class Roles extends AuditableEntity implements GrantedAuthority {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "pk_id")
-    private long id;
+    private Long id;
     @Column(name = "name",unique = true)
     private String name;
     private Set<String> permissions;

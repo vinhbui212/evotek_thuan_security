@@ -1,4 +1,4 @@
-package org.example.thuan_security.service.impl;
+package org.example.thuan_security.service.user;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -13,15 +13,23 @@ import org.example.thuan_security.repository.UserRepository;
 import org.example.thuan_security.request.ChangePasswordRequest;
 import org.example.thuan_security.request.LoginRequest;
 import org.example.thuan_security.request.RegisterRequest;
+import org.example.thuan_security.request.ResetPasswordRequest;
 import org.example.thuan_security.response.*;
 import org.example.thuan_security.service.*;
+import org.example.thuan_security.service.keycloak.UserKCLService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -46,7 +54,10 @@ public class UserServiceImpl implements UserService {
     private EmailService emailService;
     @Autowired
     private RefreshTokenService refreshTokenService;
-
+    @Autowired
+    private UserKCLService userKCLService;
+    @Value("${keycloak.enabled}")
+    private boolean isKeycloakEnabled;
 
     private final Map<String, String> tokenStorage = new HashMap<>();
     private final Cache<String, String> otpCache = CacheBuilder.newBuilder()
@@ -61,11 +72,15 @@ public class UserServiceImpl implements UserService {
         try {
             Users user = userRepository.findByEmail(loginRequest.getEmail());
             if (user == null) {
-                return new LoginResponse("404", "User not found", "",null,null);
+                return new LoginResponse("404", "User not found", "", null, null);
             }
 
             if (!user.isVerified()) {
-                return new LoginResponse("403", "Account not verified. Please verify your account.", "",null,null);
+                return new LoginResponse("403", "Account not verified. Please verify your account.", "", null, null);
+            }
+
+            if (!user.isUserEnabled()) {
+                return new LoginResponse("403", "Account not enabled.", "", null, null);
             }
 
             Authentication authentication = authenticationManager.authenticate(
@@ -84,17 +99,18 @@ public class UserServiceImpl implements UserService {
                 });
                 emailService.sendMail(email, "Your OTP Code", "Your OTP code is: " + otp);
 
-                return new LoginResponse("202", "OTP sent to email. Please verify.", null,null,null);
+                return new LoginResponse("202", "OTP sent to email. Please verify.", null, null, null);
             }
         } catch (Exception e) {
-            return new LoginResponse("401", "Wrong email or password", "",null,null);
+            return new LoginResponse("401", "Wrong email or password", "", null, null);
         }
 
-        return new LoginResponse("401", "Wrong email or password", "",null,null);
+        return new LoginResponse("401", "Wrong email or password", "", null, null);
     }
+
     @Override
     public LoginResponse validateLoginWithOtp(String email, String otp) {
-        if (validateOtp(email,otp)) {
+        if (validateOtp(email, otp)) {
             deleteOtp(email);
             Users user = userRepository.findByEmail(email);
             if (user != null) {
@@ -106,19 +122,18 @@ public class UserServiceImpl implements UserService {
                         new UsernamePasswordAuthenticationToken(email, null, authorities),
                         email);
 
-                String rftoken=refreshTokenService.createRefreshToken(email);
+                String rftoken = refreshTokenService.createRefreshToken(email);
 
                 LocalDateTime expiration = jwtTokenProvider.extractExpiration(token);
 
-                return new LoginResponse("200", "Login successful", token,rftoken, expiration);
+                return new LoginResponse("200", "Login successful", token, rftoken, expiration);
             } else {
-                return new LoginResponse("404", "User not found", "",null,null);
+                return new LoginResponse("404", "User not found", "", null, null);
             }
         } else {
-            return new LoginResponse("401", "Invalid or expired OTP", "", null,null);
+            return new LoginResponse("401", "Invalid or expired OTP", "", null, null);
         }
     }
-
 
 
     @Override
@@ -139,7 +154,7 @@ public class UserServiceImpl implements UserService {
             Roles roles = roleRepository.findByName("ROLE_USER");
             String roleName = roles.getName();
             newUser.setRoles(Collections.singleton(roleName));
-            String fullname=registerRequest.getFirstName()+ " "+ registerRequest.getLastName();
+            String fullname = registerRequest.getFirstName() + " " + registerRequest.getLastName();
             newUser.setFullName(fullname);
             userRepository.save(newUser);
             String verificationLink = "http://localhost:8080/api/auth/verifiedAccount?email=" + registerRequest.getEmail();
@@ -157,7 +172,7 @@ public class UserServiceImpl implements UserService {
                     ""
             );
             UserKCLResponse apiResponse = new UserKCLResponse();
-           apiResponse.setUsername(registerRequest.getUsername());
+            apiResponse.setUsername(registerRequest.getUsername());
             return apiResponse;
         } else {
             UserKCLResponse apiResponse = new UserKCLResponse();
@@ -170,20 +185,41 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse getUserInfo(String token) {
-            String email = jwtTokenProvider.extractClaims(token);
-            String role = jwtTokenProvider.extractRole(token);
-            Users user = userRepository.findByEmail(email);
+        if(isKeycloakEnabled){
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof Jwt) {
+                Jwt jwt = (Jwt) principal;
+                log.info(jwt.toString());
+                String email = jwt.getClaimAsString("email");
+                log.info(email);
+                Users user=userRepository.findByEmail(email);
 
-            // Tạo UserResponse
-            UserResponse userResponse = new UserResponse();
-            userResponse.setEmail(email);
-            userResponse.setRole(role);
-            userResponse.setFullName(user.getFullName());
-            userResponse.setImgUrl(user.getImage_url());
-
-            return userResponse;
-
+                UserResponse userResponse = new UserResponse();
+                userResponse.setEmail(email);
+                userResponse.setLastName(user.getFullName());
+                userResponse.setImgUrl(user.getImage_url());
+                return userResponse;
+            } else {
+                log.info("Principal is not of type Jwt: " + principal.toString());
+            }
         }
+        else {
+        String email = jwtTokenProvider.extractClaims(token);
+        String role = jwtTokenProvider.extractRole(token);
+        Users user = userRepository.findByEmail(email);
+
+        // Tạo UserResponse
+        UserResponse userResponse = new UserResponse();
+        userResponse.setEmail(email);
+        userResponse.setRole(role);
+        userResponse.setFullName(user.getFullName());
+        userResponse.setImgUrl(user.getImage_url());
+
+        return userResponse;
+    }
+        return null;
+    }
 
     @Override
     public ApiResponse updateUserInfo(String token, UserResponse userResponse) {
@@ -195,13 +231,13 @@ public class UserServiceImpl implements UserService {
             ApiResponse apiResponse = new ApiResponse<>(200, "Updated", 1, null);
             return apiResponse;
         } catch (Exception e) {
-                return new ApiResponse<>(404, "Empty name", 0, null);
+            return new ApiResponse<>(404, "Empty name", 0, null);
 
         }
     }
 
     @Override
-    public boolean isVerifiedAccount(String email){
+    public boolean isVerifiedAccount(String email) {
         Users user = userRepository.findByEmail(email);
         user.setVerified(true);
         userRepository.save(user);
@@ -214,16 +250,15 @@ public class UserServiceImpl implements UserService {
         if (passwordEncoder.matches(changePasswordRequest.getOldPassword(), user.getPassword())) {
             user.setPassword(passwordEncoder.encode(changePasswordRequest.getNewPassword()));
             userRepository.save(user);
-            emailService.sendMail(email,"Mật khẩu thay đổi","Mật khẩu của bạn đã được thay đổi ");
+            emailService.sendMail(email, "Mật khẩu thay đổi", "Mật khẩu của bạn đã được thay đổi ");
             ApiResponse<String> apiResponse = new ApiResponse<>();
             apiResponse.setCode(1);
             apiResponse.setMessage("Password changed successfully");
             apiResponse.setStatus(200);
             apiResponse.setData(List.of(""));
             return apiResponse;
-        }
-        else {
-            return new ApiResponse<>(401,"Wrong current password",0,List.of(""));
+        } else {
+            return new ApiResponse<>(401, "Wrong current password", 0, List.of(""));
         }
 
     }
@@ -268,12 +303,12 @@ public class UserServiceImpl implements UserService {
             Users user = userRepository.findByEmail(email);
             user.setPassword(passwordEncoder.encode(newPassword));
             userRepository.save(user);
-            emailService.sendMail(email,"Mật khẩu thay đổi","Mật khẩu của bạn đã được thay đổi ");
+            emailService.sendMail(email, "Mật khẩu thay đổi", "Mật khẩu của bạn đã được thay đổi ");
 
             return new ApiResponse<>(200, "Password changed successfully", 1, List.of(""));
 
         }
-        return new ApiResponse<>(401,"Wrong OTP",0,List.of(""));
+        return new ApiResponse<>(401, "Wrong OTP", 0, List.of(""));
     }
 
     @Override
@@ -284,13 +319,54 @@ public class UserServiceImpl implements UserService {
         Roles roles = roleRepository.findByName("ROLE_USER");
         String roleName = roles.getName();
         newUser.setRoles(Collections.singleton(roleName));
-        String fullname=registerRequest.getFirstName()+ " "+ registerRequest.getLastName();
+        String fullname = registerRequest.getFirstName() + " " + registerRequest.getLastName();
         newUser.setFullName(fullname);
         newUser.setDob(registerRequest.getDob());
         newUser.setVerified(true);
         userRepository.save(newUser);
 
         return "Created user successfull";
+    }
+
+    @Override
+    public String updateEnabled(String id, RegisterRequest request) {
+        Users user = userRepository.findByUserId(id);
+        if (user != null) {
+            user.setUserEnabled(request.isEnabled());
+            userRepository.save(user);
+            userKCLService.updateEnabled(id,request);
+            return "Updated user successfully";
+        } else return "User does not exist";
+    }
+
+    @Override
+    public String resetPassword(String userId, ResetPasswordRequest request) {
+        Users users=userRepository.findByUserId(userId);
+        if (users != null) {
+            users.setPassword(request.getValue());
+            userRepository.save(users);
+            userKCLService.resetPassword(userId,request);
+            return "Reset successful";
+        }
+        else return "User does not exist";
+    }
+
+    @Override
+    public Page<Users> getAllUsers(Pageable pageable) {
+
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Order.asc("id")));
+        return userRepository.findAll(sortedPageable);
+
+    }
+
+    @Override
+    public String deleteUser(Long userId) {
+        Users users=userRepository.findById(userId).orElseThrow();
+        if(users!=null) {
+            users.setDeleted(true);
+            return "Deleted ok";
+        }
+        else return "User does not exist";
     }
 
 
@@ -300,7 +376,7 @@ public class UserServiceImpl implements UserService {
         return String.valueOf(otp);
     }
 
-    public String generateRefreshToken(String token){
+    public String generateRefreshToken(String token) {
         return UUID.randomUUID().toString();
     }
 
