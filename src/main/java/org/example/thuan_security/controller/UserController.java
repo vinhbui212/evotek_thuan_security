@@ -45,6 +45,7 @@ public class UserController {
     private UserActivityLogService logService;
     @Autowired
     private DeleteStraegy deleteStraegy;
+
     @GetMapping("/info")
     public ResponseEntity<UserResponse> getUserInfo(HttpServletRequest request) {
         String token = jwtAuthenticationFilter.getTokenFromRequest(request);
@@ -85,16 +86,19 @@ public class UserController {
     }
 
     @GetMapping("/admin")
-    @PreAuthorize("hasPermission('user','READ')")
+    @PreAuthorize("hasPermission('user','CREATE')")
     public String admin() {
         return "admin";
     }
+
 
     @PostMapping()
     public String createUser(@RequestBody RegisterRequest request) {
 
         return userService.createUser(request);
     }
+
+    @PreAuthorize("hasPermission('user','UPDATE')")
     @PutMapping("/{id}/update")
     public String lock(
             @PathVariable String id,
@@ -104,6 +108,7 @@ public class UserController {
 
         }
 
+    @PreAuthorize("hasPermission('user','READ')")
     @GetMapping("/all")
     public Page<Users> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
@@ -113,6 +118,7 @@ public class UserController {
         return userService.getAllUsers(pageable);
     }
 
+    @PreAuthorize("hasPermission('user','DELETE')")
     @DeleteMapping("/{id}/delete")
     public String delete(@PathVariable Long id) {
         return userService.deleteUser(id);

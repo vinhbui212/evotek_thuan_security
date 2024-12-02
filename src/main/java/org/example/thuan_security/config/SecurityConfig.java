@@ -14,6 +14,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtDecoders;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
@@ -34,6 +36,9 @@ public class SecurityConfig {
     @Value("${keycloak.enabled}")
     private boolean isKeycloakEnabled;
 
+    @Value("${idp.jwt-endpoint}")
+    private String jwtEndpoint;
+
     @Bean
     public static PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -41,13 +46,12 @@ public class SecurityConfig {
 
     @Bean
     public JwtDecoder jwtDecoder() {
-        return JwtDecoders.fromIssuerLocation("http://localhost:8080/realms/vinhbui21");
+        NimbusJwtDecoder jwtDecoder = JwtDecoders.fromIssuerLocation(jwtEndpoint);
+        jwtDecoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(jwtEndpoint));
+        return jwtDecoder;
     }
 
-    private final String[] ADMIN_ENDPOINT = {"/api/permissions","/api/roles"};
-    private final String[] MANAGER_ENDPOINT = {"/api/user/{id}/update","api/user/admin","api/user/all","api/user/{id}/delete"};
-
-    private final String[] PUBLIC_ENDPOINTS = {"/api/auth/**","api/files/**","/api/keycloak/**"};
+    private final String[] SWAGGER_ENDPOINT = {"/swagger-ui.html", "/v3/api-docs/**", "/swagger-ui/**","/swagger-ui/index.html"};
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -55,9 +59,8 @@ public class SecurityConfig {
             httpSecurity
                     .csrf(csrf -> csrf.disable())
                     .authorizeRequests(authorizeRequests -> {
-                        authorizeRequests.requestMatchers(PUBLIC_ENDPOINTS).permitAll();
-                        authorizeRequests.requestMatchers(ADMIN_ENDPOINT).hasRole("ROLE_ADMIN");
-                        authorizeRequests.requestMatchers(MANAGER_ENDPOINT).hasRole("ROLE_MANAGER");
+                        authorizeRequests.requestMatchers("api/auth/**").permitAll();
+                        authorizeRequests.requestMatchers(SWAGGER_ENDPOINT).permitAll();
                         authorizeRequests.anyRequest().authenticated();
                     })
 //                    .httpBasic(Customizer.withDefaults())
@@ -69,7 +72,8 @@ public class SecurityConfig {
             httpSecurity
                     .csrf(csrf -> csrf.disable())
                     .authorizeRequests(authorizeRequests -> {
-                        authorizeRequests.requestMatchers(PUBLIC_ENDPOINTS).permitAll();
+                        authorizeRequests.requestMatchers("api/auth/**").permitAll();
+                        authorizeRequests.requestMatchers(SWAGGER_ENDPOINT).permitAll();
                         authorizeRequests.anyRequest().authenticated();
                     })
                     .exceptionHandling(exception -> exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))

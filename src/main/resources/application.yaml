@@ -46,20 +46,27 @@ file:
 
 idp:
   url: http://localhost:8080
-  token-endpoint: /realms/vinhbui21/protocol/openid-connect/token  # Cấu hình endpoint cho token
+  token-endpoint: /realms/vinhbui21/protocol/openid-connect/token
   register-endpoint: /admin/realms/vinhbui21/users
   logout-endpoint: /realms/vinhbui21/protocol/openid-connect/logout
   update-endpoint: /admin/realms/vinhbui21/users/{userId}
   resetpass-endpoint: /admin/realms/vinhbui21/users/{userId}/reset-password
+  jwt-endpoint: http://localhost:8080/realms/vinhbui21
   client-id: vinhbui21_app
   client-secret: 43M4age3lOVg8HyfIsBt3JmsMtnkx6h6
 
 security:
   oauth2:
   resourceserver:
-      jwt:
-          issuer-uri: http://localhost:8080/realms/vinhbui21
-          jwk-set-uri: http://localhost:8080/realms/vinhbui21/protocol/openid-connect/certs
+    jwt:
+      issuer-uri: http://localhost:8080/realms/vinhbui21
+      jwk-set-uri: http://localhost:8080/realms/vinhbui21/protocol/openid-connect/certs
 
 keycloak:
-    enabled: false
+  enabled: false
+
+  springdoc:
+    swagger-ui:
+      path: /swagger-ui.html
+    api-docs:
+      version: openapi_3_0

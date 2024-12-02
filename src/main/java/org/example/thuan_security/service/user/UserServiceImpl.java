@@ -362,11 +362,13 @@ public class UserServiceImpl implements UserService {
     @Override
     public String deleteUser(Long userId) {
         Users users=userRepository.findById(userId).orElseThrow();
-        if(users!=null) {
+        log.info(users.getFullName());
+        if(users!=null && !users.isDeleted()) {
             users.setDeleted(true);
+            userRepository.save(users);
             return "Deleted ok";
         }
-        else return "User does not exist";
+        else return "User already deleted";
     }
 
 
