@@ -1,0 +1,65 @@
+server:
+  port: 8081
+spring:
+  application:
+    name: thuan_security
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: 1234
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: vinhhoc21@gmail.com
+    password: syff bddt tsru gavg
+    protocol: smtp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+    default-encoding: UTF-8
+
+keystore:
+  file: keystore.jks
+  password: 123456
+  alias: vinhkey1
+
+jwt:
+  expiration:
+    time: 9000000
+
+file:
+  upload-dir: uploads
+
+idp:
+  url: http://localhost:8080
+  token-endpoint: /realms/vinhbui21/protocol/openid-connect/token  # Cấu hình endpoint cho token
+  register-endpoint: /admin/realms/vinhbui21/users
+  logout-endpoint: /realms/vinhbui21/protocol/openid-connect/logout
+  update-endpoint: /admin/realms/vinhbui21/users/{userId}
+  resetpass-endpoint: /admin/realms/vinhbui21/users/{userId}/reset-password
+  client-id: vinhbui21_app
+  client-secret: 43M4age3lOVg8HyfIsBt3JmsMtnkx6h6
+
+security:
+  oauth2:
+  resourceserver:
+      jwt:
+          issuer-uri: http://localhost:8080/realms/vinhbui21
+          jwk-set-uri: http://localhost:8080/realms/vinhbui21/protocol/openid-connect/certs
+
+keycloak:
+    enabled: false

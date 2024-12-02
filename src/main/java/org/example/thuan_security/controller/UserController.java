@@ -6,14 +6,23 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.thuan_security.config.JwtAuthenticationFilter;
 import org.example.thuan_security.config.JwtTokenProvider;
+import org.example.thuan_security.model.Users;
 import org.example.thuan_security.request.ChangePasswordRequest;
+import org.example.thuan_security.request.RegisterRequest;
 import org.example.thuan_security.response.ApiResponse;
 import org.example.thuan_security.response.UserResponse;
 import org.example.thuan_security.service.UserActivityLogService;
-import org.example.thuan_security.service.UserService;
+import org.example.thuan_security.service.factory.DeleteStraegy;
+import org.example.thuan_security.service.user.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -22,7 +31,7 @@ import java.util.List;
 import static org.example.thuan_security.controller.AuthController.convertTov4;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/user")
 @RequiredArgsConstructor
 @Slf4j
 public class UserController {
@@ -34,7 +43,9 @@ public class UserController {
     private JwtTokenProvider jwtTokenProvider;
     @Autowired
     private UserActivityLogService logService;
-    @GetMapping("/user")
+    @Autowired
+    private DeleteStraegy deleteStraegy;
+    @GetMapping("/info")
     public ResponseEntity<UserResponse> getUserInfo(HttpServletRequest request) {
         String token = jwtAuthenticationFilter.getTokenFromRequest(request);
 
@@ -74,8 +85,36 @@ public class UserController {
     }
 
     @GetMapping("/admin")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasPermission('user','READ')")
     public String admin() {
-        return "admin" ;
+        return "admin";
+    }
+
+    @PostMapping()
+    public String createUser(@RequestBody RegisterRequest request) {
+
+        return userService.createUser(request);
+    }
+    @PutMapping("/{id}/update")
+    public String lock(
+            @PathVariable String id,
+            @RequestBody RegisterRequest registerRequest) {
+
+        return deleteStraegy.deleteStraegy(id,registerRequest);
+
+        }
+
+    @GetMapping("/all")
+    public Page<Users> getAllUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        return userService.getAllUsers(pageable);
+    }
+
+    @DeleteMapping("/{id}/delete")
+    public String delete(@PathVariable Long id) {
+        return userService.deleteUser(id);
     }
 }
