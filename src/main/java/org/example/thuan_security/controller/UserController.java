@@ -31,7 +31,7 @@ import java.util.List;
 import static org.example.thuan_security.controller.AuthController.convertTov4;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/user")
 @RequiredArgsConstructor
 @Slf4j
 public class UserController {
@@ -45,7 +45,7 @@ public class UserController {
     private UserActivityLogService logService;
     @Autowired
     private DeleteStraegy deleteStraegy;
-    @GetMapping("/user")
+    @GetMapping("/info")
     public ResponseEntity<UserResponse> getUserInfo(HttpServletRequest request) {
         String token = jwtAuthenticationFilter.getTokenFromRequest(request);
 
@@ -85,12 +85,12 @@ public class UserController {
     }
 
     @GetMapping("/admin")
-    @PreAuthorize("hasPermission(null, 'user.READ')")
+    @PreAuthorize("hasPermission('user','READ')")
     public String admin() {
         return "admin";
     }
 
-    @PostMapping("user")
+    @PostMapping()
     public String createUser(@RequestBody RegisterRequest request) {
 
         return userService.createUser(request);
@@ -104,7 +104,7 @@ public class UserController {
 
         }
 
-    @GetMapping("/users")
+    @GetMapping("/all")
     public Page<Users> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {

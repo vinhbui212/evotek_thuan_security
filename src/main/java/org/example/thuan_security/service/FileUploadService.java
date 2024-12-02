@@ -37,7 +37,7 @@ public class FileUploadService {
         }
 
         if (user.getImage_url() != null) {
-            String oldFilePath = user.getImage_url().replace("http://localhost:8080/api/files/images/", uploadDir);
+            String oldFilePath = user.getImage_url().replace("http://localhost:8081/api/files/images/", uploadDir);
             File oldFile = new File(oldFilePath);
             if (oldFile.exists() && !oldFile.delete()) {
                 log.warn("Không thể xóa file cũ: " + oldFilePath);
@@ -49,7 +49,7 @@ public class FileUploadService {
         Files.write(filePath, file.getBytes());
         log.info("File saved at: " + filePath.toString());
 
-        String imageUrl = "http://localhost:8080/api/files/images/" + fileName;
+        String imageUrl = "http://localhost:8081/api/files/images/" + fileName;
         user.setImage_url(imageUrl);
         userRepository.save(user);
 

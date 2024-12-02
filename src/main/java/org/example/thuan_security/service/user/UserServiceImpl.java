@@ -157,7 +157,7 @@ public class UserServiceImpl implements UserService {
             String fullname = registerRequest.getFirstName() + " " + registerRequest.getLastName();
             newUser.setFullName(fullname);
             userRepository.save(newUser);
-            String verificationLink = "http://localhost:8080/api/auth/verifiedAccount?email=" + registerRequest.getEmail();
+            String verificationLink = "http://localhost:8081/api/auth/verifiedAccount?email=" + registerRequest.getEmail();
             emailService.sendMail(
                     registerRequest.getEmail(),
                     "Xác nhận đăng ký",

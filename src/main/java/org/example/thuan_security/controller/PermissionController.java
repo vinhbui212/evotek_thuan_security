@@ -17,14 +17,15 @@ public class PermissionController {
     private final PermissionService permissionService;
 
     @PostMapping
-    public ResponseEntity<Permissions> createPermission(@RequestParam String name) {
-        Permissions permission = permissionService.createPermission(name);
+    public ResponseEntity<Permissions> createPermission(@RequestParam String name,
+    @RequestParam String scope, @RequestParam String resource ) {
+        Permissions permission = permissionService.createPermission(name, scope, resource);
         return ResponseEntity.status(HttpStatus.CREATED).body(permission);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Permissions> updatePermission(@PathVariable Long id, @RequestParam String name) {
-        Permissions updatedPermission = permissionService.updatePermission(id, name);
+    public ResponseEntity<Permissions> updatePermission(@PathVariable Long id, @RequestParam String name,@RequestParam String scope, @RequestParam String resource) {
+        Permissions updatedPermission = permissionService.updatePermission(id, name, scope, resource);
         return ResponseEntity.ok(updatedPermission);
     }
 

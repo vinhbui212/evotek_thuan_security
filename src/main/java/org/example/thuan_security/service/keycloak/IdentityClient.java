@@ -11,24 +11,24 @@ import org.springframework.web.bind.annotation.*;
 
 @FeignClient(name = "identity-client", url = "${idp.url}")
 public interface IdentityClient {
-    @PostMapping(value = "/realms/vinhbui21/protocol/openid-connect/token",
+    @PostMapping(value = "${idp.token-endpoint}",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     TokenExchangeResponse exchangeToken(@QueryMap TokenExchangeParam param);
 
-    @PostMapping(value = "/admin/realms/vinhbui21/users",
+    @PostMapping(value = "${idp.register-endpoint}",
             consumes = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<?> createUser(
             @RequestHeader("authorization") String token,
             @RequestBody UserCreationParam param);
 
-    @PostMapping(value = "/realms/vinhbui21/protocol/openid-connect/logout",
+    @PostMapping(value = "${idp.logout-endpoint}",
                     consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     String logout(@RequestHeader("authorization") String token, @QueryMap LogoutRequest request);
 
-    @PutMapping(value= "/admin/realms/vinhbui21/users/{userId}")
+    @PutMapping(value= "${idp.update-endpoint}")
     String updateUser(@RequestHeader("authorization") String token,@PathVariable String userId, @RequestBody RegisterRequest request);
 
-    @PutMapping(value= "/admin/realms/vinhbui21/users/{userId}/reset-password")
+    @PutMapping(value= "${idp.resetpass-endpoint}")
     String resetPassword(@RequestHeader("authorization") String token,@PathVariable String userId, @RequestBody ResetPasswordRequest request);
 }
 

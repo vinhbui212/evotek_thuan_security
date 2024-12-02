@@ -3,6 +3,7 @@ package org.example.thuan_security.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.thuan_security.config.JwtAuthenticationFilter;
 import org.example.thuan_security.config.JwtTokenProvider;
 import org.example.thuan_security.model.Users;
 import org.example.thuan_security.request.ResetPasswordRequest;
@@ -48,8 +49,10 @@ public class AuthController {
     private UserRepository userRepository;
     @Autowired
     private ResetPasswordStrategy resetPasswordStrategy;
-
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RegisterFactory registerFactory;
+    @Autowired
+    private BlackListService blackListService;
 
     @PostMapping("/register")
     public UserKCLResponse register(@RequestBody RegisterRequest registerRequest) throws Exception {
@@ -119,9 +122,9 @@ public class AuthController {
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest request,HttpServletRequest httpServletRequest) throws Exception {
         String refreshToken = request.getRefreshToken();
-
+        String token=jwtAuthenticationFilter.getTokenFromRequest(httpServletRequest);
         if (!refreshTokenService.isRefreshTokenValid(refreshToken)) {
             return ResponseEntity.status(401).body("Invalid or expired refresh token");
         }
@@ -133,7 +136,7 @@ public class AuthController {
         if (user != null) {
             List<SimpleGrantedAuthority> authorities = user.getRoles().stream().map(SimpleGrantedAuthority::new).toList();
             String newAccessToken = jwtTokenProvider.createToken(new UsernamePasswordAuthenticationToken(email, null, authorities), email);
-
+            blackListService.addTokenToBlacklist(token);
             return ResponseEntity.ok(new TokenResponse(newAccessToken));
         }
         return ResponseEntity.status(401).body("Invalid or expired refresh token");

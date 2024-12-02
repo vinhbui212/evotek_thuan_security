@@ -1,21 +1,17 @@
 package org.example.thuan_security.config;
 
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.thuan_security.model.Permissions;
-import org.example.thuan_security.model.Roles;
 import org.example.thuan_security.model.Users;
 import org.example.thuan_security.repository.PermissionsRepository;
-import org.example.thuan_security.repository.RoleRepository;
 import org.example.thuan_security.repository.UserRepository;
 import org.springframework.security.access.PermissionEvaluator;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 import java.io.Serializable;
-import java.util.Objects;
-import java.util.Set;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -24,24 +20,10 @@ public class CustomPermissionEvaluator implements PermissionEvaluator {
 
     private final UserRepository accountRepository;
     private final PermissionsRepository permissionRepository;
-    private final RoleRepository roleRepository;
 
     @Override
     public boolean hasPermission(Authentication authentication, Object targetDomainObject, Object permission) {
-        log.info("hasPermission called with: " +
-                "authentication: " + authentication.getName() +
-                ", targetDomainObject: " + targetDomainObject +
-                ", permission: " + permission);
-        if (permission instanceof String resourceName) {
-            Permissions foundResource = permissionRepository.findByName(resourceName);
-            log.info(foundResource.toString());
-            if (foundResource == null) {
-                return false;
-            }
-            log.info(String.valueOf(checkUserPermission(authentication.getName(), foundResource.getId(), permission)));
-            return checkUserPermission(authentication.getName(), foundResource.getId(), permission);
-        }
-        return false;
+        return checkUserPermission(authentication.getName(), targetDomainObject, permission);
     }
 
     @Override
@@ -49,26 +31,26 @@ public class CustomPermissionEvaluator implements PermissionEvaluator {
         return checkUserPermission(authentication.getName(), targetId, permission);
     }
 
-    private boolean checkUserPermission(String email, Object resourceId, Object permissionScope) {
+    private boolean checkUserPermission(String email, Object resource, Object permissionScope) {
         Users user = accountRepository.findByEmail(email);
         if (user == null) {
+            log.warn("User with email {} not found", email);
             return false;
         }
 
-
-        Set<String> userRoles = user.getRoles();
-        if (userRoles.isEmpty()) {
-            return false;
+        List<Permissions> permissionsByName = permissionRepository.findAllByScope(permissionScope.toString());
+        if (permissionsByName.isEmpty()) {
+            log.warn("No permissions found for name {}", permissionScope);
         }
 
-        for (String roleName : userRoles) {
-            Roles role = roleRepository.findByName(roleName);
-            if (role != null && role.getPermissions().contains(permissionScope)) {
-                return true;
-            }
+        List<Permissions> permissionsByResource = permissionRepository.findAllByResource(resource.toString());
+        if (permissionsByResource.isEmpty()) {
+            log.warn("No permissions found for resource {}", resource);
         }
 
-        return false;
+        return !permissionsByName.isEmpty() && !permissionsByResource.isEmpty();
     }
 
 }
+
+

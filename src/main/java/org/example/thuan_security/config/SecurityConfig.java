@@ -44,8 +44,10 @@ public class SecurityConfig {
         return JwtDecoders.fromIssuerLocation("http://localhost:8080/realms/vinhbui21");
     }
 
-    private final String[] KEYCLOAK_ENDPOINTS = {"/api/keycloak/register"};
-    private final String[] PUBLIC_ENDPOINTS = {"/api/auth/**","/api/roles/**","/api/permissions/**","api/**"};
+    private final String[] ADMIN_ENDPOINT = {"/api/permissions","/api/roles"};
+    private final String[] MANAGER_ENDPOINT = {"/api/user/{id}/update","api/user/admin","api/user/all","api/user/{id}/delete"};
+
+    private final String[] PUBLIC_ENDPOINTS = {"/api/auth/**","api/files/**","/api/keycloak/**"};
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -54,6 +56,8 @@ public class SecurityConfig {
                     .csrf(csrf -> csrf.disable())
                     .authorizeRequests(authorizeRequests -> {
                         authorizeRequests.requestMatchers(PUBLIC_ENDPOINTS).permitAll();
+                        authorizeRequests.requestMatchers(ADMIN_ENDPOINT).hasRole("ROLE_ADMIN");
+                        authorizeRequests.requestMatchers(MANAGER_ENDPOINT).hasRole("ROLE_MANAGER");
                         authorizeRequests.anyRequest().authenticated();
                     })
 //                    .httpBasic(Customizer.withDefaults())

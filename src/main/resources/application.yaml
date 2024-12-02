@@ -39,13 +39,18 @@ keystore:
 
 jwt:
   expiration:
-    time: 900000
+    time: 9000000
 
 file:
   upload-dir: uploads
 
 idp:
   url: http://localhost:8080
+  token-endpoint: /realms/vinhbui21/protocol/openid-connect/token  # Cấu hình endpoint cho token
+  register-endpoint: /admin/realms/vinhbui21/users
+  logout-endpoint: /realms/vinhbui21/protocol/openid-connect/logout
+  update-endpoint: /admin/realms/vinhbui21/users/{userId}
+  resetpass-endpoint: /admin/realms/vinhbui21/users/{userId}/reset-password
   client-id: vinhbui21_app
   client-secret: 43M4age3lOVg8HyfIsBt3JmsMtnkx6h6
 
