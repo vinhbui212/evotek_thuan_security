@@ -2,9 +2,12 @@ package org.example.thuan_security.controller;
 
 
 import lombok.RequiredArgsConstructor;
+import org.example.thuan_security.model.Permissions;
 import org.example.thuan_security.model.Roles;
 import org.example.thuan_security.model.Users;
+import org.example.thuan_security.request.SearchRequest;
 import org.example.thuan_security.service.RoleService;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -57,6 +60,13 @@ public class RoleController {
             @PathVariable Long roleId) {
         roleService.assignRoleToUser(userId, roleId);
         return ResponseEntity.ok("Rol assigned to role successfully");
+    }
+
+    @PreAuthorize("hasPermission('role','READ')")
+    @GetMapping
+    public ResponseEntity<Page<Roles>> getAllRoles(@RequestBody SearchRequest searchRequest) {
+        Page<Roles> permissions = roleService.getAllRoles(searchRequest);
+        return ResponseEntity.ok(permissions);
     }
 }
 

@@ -9,6 +9,7 @@ import org.example.thuan_security.config.JwtTokenProvider;
 import org.example.thuan_security.model.Users;
 import org.example.thuan_security.request.ChangePasswordRequest;
 import org.example.thuan_security.request.RegisterRequest;
+import org.example.thuan_security.request.SearchRequest;
 import org.example.thuan_security.response.ApiResponse;
 import org.example.thuan_security.response.UserResponse;
 import org.example.thuan_security.service.UserActivityLogService;
@@ -77,8 +78,9 @@ public class UserController {
     public ResponseEntity<ApiResponse> updateUserInfo(HttpServletRequest request,
                                                       @Valid @RequestBody UserResponse userResponse) {
         String token=jwtAuthenticationFilter.getTokenFromRequest(request);
-        String email=jwtTokenProvider.extractClaims(token);
         String ipAddress=convertTov4(request.getRemoteAddr());
+        Authentication authentication= SecurityContextHolder.getContext().getAuthentication();
+        String email=authentication.getName();
         LocalDateTime localDateTime=LocalDateTime.now();
         logService.logActivity(email,"UPDATE_INFOR",ipAddress,localDateTime);
         ApiResponse response = userService.updateUserInfo(token, userResponse);
@@ -110,17 +112,22 @@ public class UserController {
 
     @PreAuthorize("hasPermission('user','READ')")
     @GetMapping("/all")
-    public Page<Users> getAllUsers(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-
-        Pageable pageable = PageRequest.of(page, size);
-        return userService.getAllUsers(pageable);
+    public Page<UserResponse> getAllUsers(@RequestBody SearchRequest searchRequest) {
+        return userService.getAllUsers(searchRequest);
     }
 
     @PreAuthorize("hasPermission('user','DELETE')")
     @DeleteMapping("/{id}/delete")
     public String delete(@PathVariable Long id) {
         return userService.deleteUser(id);
+    }
+
+    @GetMapping("/search")
+    public Page<UserResponse> searchUsers(
+            @RequestBody SearchRequest searchRequest) {
+
+
+        // Gọi phương thức searchUsers từ Service
+        return userService.searchUsers(searchRequest);
     }
 }

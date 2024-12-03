@@ -70,3 +70,10 @@ keycloak:
       path: /swagger-ui.html
     api-docs:
       version: openapi_3_0
+#      group: services
+      package: com.example.thuan_security.controller
+      description: This is an official API document of IAM Service 2 service
+      title: IAM Service 2 API document
+      server: http://localhost:8081/
+
+

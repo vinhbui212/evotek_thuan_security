@@ -2,7 +2,9 @@ package org.example.thuan_security.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.example.thuan_security.model.Permissions;
+import org.example.thuan_security.request.SearchRequest;
 import org.example.thuan_security.service.PermissionService;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -41,8 +43,8 @@ public class PermissionController {
 
     @PreAuthorize("hasPermission('permission','READ')")
     @GetMapping
-    public ResponseEntity<List<Permissions>> getAllPermissions() {
-        List<Permissions> permissions = permissionService.getAllPermissions();
+    public ResponseEntity<Page<Permissions>> getAllPermissions(@RequestBody SearchRequest searchRequest) {
+        Page<Permissions> permissions = permissionService.getAllPermissions(searchRequest);
         return ResponseEntity.ok(permissions);
     }
 

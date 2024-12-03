@@ -11,10 +11,17 @@ import org.example.thuan_security.repository.PermissionRoleRepository;
 import org.example.thuan_security.repository.PermissionsRepository;
 import org.example.thuan_security.repository.RoleRepository;
 import org.example.thuan_security.repository.UserRepository;
+import org.example.thuan_security.request.SearchRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.List;
+
+import static org.example.thuan_security.service.user.UserServiceImpl.createPageable;
 
 @Service
 @RequiredArgsConstructor
@@ -68,6 +75,16 @@ public class RoleService {
         users.setRoles(Collections.singleton(roleName));
         userRepository.save(users);
 
+    }
+
+    public Page<Roles> getAllRoles(SearchRequest searchRequest) {
+        Pageable sortedPageable = createPageable(searchRequest);
+
+        Page<Roles> roles = roleRepository.findAll(sortedPageable);
+        if (roles.isEmpty()) {
+            System.out.println("No users found.");
+        }
+        return roles;
     }
 }
 
