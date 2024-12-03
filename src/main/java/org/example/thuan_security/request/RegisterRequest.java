@@ -1,11 +1,13 @@
 package org.example.thuan_security.request;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.example.thuan_security.config.CustomLocalDateSerializer;
 import org.hibernate.validator.constraints.Length;
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -26,7 +28,7 @@ public class RegisterRequest {
     String firstName;
     String lastName;
 
-    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    @JsonSerialize(using = CustomLocalDateSerializer.class)
     LocalDate dob;
     boolean enabled;
 

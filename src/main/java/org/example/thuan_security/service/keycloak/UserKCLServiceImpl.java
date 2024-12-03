@@ -97,6 +97,7 @@ public class UserKCLServiceImpl implements UserKCLService {
                 var updateResponse = identityClient.resetPassword("Bearer " + token.getAccessToken(), userId, updatedRequest);
                 Users user = userRepository.findByUserId(userId);
                 user.setPassword(passwordEncoder.encode(request.getValue()));
+                userRepository.save(user);
                 return "Reset successful";
             } else {
                 return "Reset failed";
