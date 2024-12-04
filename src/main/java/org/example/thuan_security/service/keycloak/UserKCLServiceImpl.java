@@ -89,11 +89,14 @@ public class UserKCLServiceImpl implements UserKCLService {
     }
 
     @Override
-    public String resetPassword(String userId, ResetPasswordRequest request) {
+    public String resetPassword(String id, ResetPasswordRequest request) {
         try {
-            if (userRepository.existsByUserId(userId)) {
+            if (userRepository.existsById(Long.valueOf(id))) {
                 var token = identityClient.exchangeToken(TokenExchangeParam.builder().grant_type("client_credentials").client_id(clientId).client_secret(secretId).scope("openid").build());
                 ResetPasswordRequest updatedRequest = new ResetPasswordRequest(request.getValue());
+                Users users=userRepository.findById(Long.valueOf(id)).orElseThrow();
+                String userId= users.getUserId();
+                log.info(userId);
                 var updateResponse = identityClient.resetPassword("Bearer " + token.getAccessToken(), userId, updatedRequest);
                 Users user = userRepository.findByUserId(userId);
                 user.setPassword(passwordEncoder.encode(request.getValue()));

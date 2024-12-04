@@ -5,8 +5,10 @@ import lombok.RequiredArgsConstructor;
 import org.example.thuan_security.model.Permissions;
 import org.example.thuan_security.model.Roles;
 import org.example.thuan_security.model.Users;
+import org.example.thuan_security.request.RoleRequest;
 import org.example.thuan_security.request.SearchRequest;
 import org.example.thuan_security.service.RoleService;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,15 +28,15 @@ public class RoleController {
 
     @PreAuthorize("hasPermission('role','CREATE')")
     @PostMapping
-    public ResponseEntity<Roles> createRole(@RequestParam String name) {
-        Roles role = roleService.createRole(name);
+    public ResponseEntity<Roles> createRole(@RequestBody RoleRequest request) {
+        Roles role = roleService.createRole(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(role);
     }
 
     @PreAuthorize("hasPermission('role','UPDATE')")
     @PutMapping("/{id}")
-    public ResponseEntity<Roles> updateRole(@PathVariable Long id, @RequestParam String name) {
-        Roles updatedRole = roleService.updateRole(id, name);
+    public ResponseEntity<Roles> updateRole(@PathVariable Long id, @RequestBody RoleRequest request) {
+        Roles updatedRole = roleService.updateRole(id, request);
         return ResponseEntity.ok(updatedRole);
     }
 
@@ -46,11 +48,11 @@ public class RoleController {
     }
 
     @PreAuthorize("hasPermission('role','UPDATE')")
-    @PostMapping("/{roleId}/assign-permissions")
-    public ResponseEntity<Void> assignPermissionsToRole(
-            @PathVariable Long roleId, @RequestBody Long permissionIds) {
-        roleService.assignPermissionsToRole(roleId, permissionIds);
-        return ResponseEntity.ok().build();
+    @PostMapping("/assign-permissions")
+    public ResponseEntity<String> assignPermissionsToRole(
+            @RequestParam Long roleId, @RequestParam Long permissionId) {
+        roleService.assignPermissionsToRole(roleId, permissionId);
+        return ResponseEntity.ok("Role "+ roleId +"assigned successflly permission " + permissionId);
     }
 
     @PreAuthorize("hasPermission('role','UPDATE')")
@@ -59,12 +61,12 @@ public class RoleController {
             @PathVariable Long userId,
             @PathVariable Long roleId) {
         roleService.assignRoleToUser(userId, roleId);
-        return ResponseEntity.ok("Rol assigned to role successfully");
+        return ResponseEntity.ok("Role assigned to role successfully");
     }
 
     @PreAuthorize("hasPermission('role','READ')")
     @GetMapping
-    public ResponseEntity<Page<Roles>> getAllRoles(@RequestBody SearchRequest searchRequest) {
+    public ResponseEntity<Page<Roles>> getAllRoles(@ParameterObject SearchRequest searchRequest) {
         Page<Roles> permissions = roleService.getAllRoles(searchRequest);
         return ResponseEntity.ok(permissions);
     }

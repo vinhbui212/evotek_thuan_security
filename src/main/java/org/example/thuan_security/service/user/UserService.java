@@ -4,6 +4,8 @@ import org.example.thuan_security.request.*;
 import org.example.thuan_security.response.*;
 import org.springframework.data.domain.Page;
 
+import java.util.List;
+
 public interface UserService {
     LoginResponse login(LoginRequest loginRequest);
 
@@ -34,5 +36,7 @@ public interface UserService {
 
     String deleteUser(Long userId);
 
-    Page<UserResponse> searchUsers(SearchRequest searchRequest);
+//    Page<UserResponse> searchUsers(SearchRequest searchRequest);
+
+    List<UserResponse> searchUsers(UserSearchRequest request);
 }

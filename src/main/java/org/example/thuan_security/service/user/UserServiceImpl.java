@@ -10,6 +10,7 @@ import org.example.thuan_security.model.Roles;
 import org.example.thuan_security.model.Users;
 import org.example.thuan_security.repository.RoleRepository;
 import org.example.thuan_security.repository.UserRepository;
+import org.example.thuan_security.repository.UserRepositoryCustom;
 import org.example.thuan_security.request.*;
 import org.example.thuan_security.response.*;
 import org.example.thuan_security.service.*;
@@ -32,6 +33,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -53,6 +55,8 @@ public class UserServiceImpl implements UserService {
     private RefreshTokenService refreshTokenService;
     @Autowired
     private UserKCLService userKCLService;
+    @Autowired
+    private UserRepositoryCustom userRepositoryCustom;
     @Value("${keycloak.enabled}")
     private boolean isKeycloakEnabled;
 
@@ -153,6 +157,7 @@ public class UserServiceImpl implements UserService {
             newUser.setRoles(Collections.singleton(roleName));
             String fullname = registerRequest.getFirstName() + " " + registerRequest.getLastName();
             newUser.setFullName(fullname);
+            newUser.setDob(registerRequest.getDob());
             userRepository.save(newUser);
             String verificationLink = "http://localhost:8081/api/auth/verifiedAccount?email=" + registerRequest.getEmail();
             emailService.sendMail(
@@ -376,9 +381,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public String resetPassword(String userId, ResetPasswordRequest request) {
-        Users users=userRepository.findByUserId(userId);
+        Users users=userRepository.findById(Long.valueOf(userId)).orElseThrow();
         if (users != null) {
-            users.setPassword(request.getValue());
+            users.setPassword(passwordEncoder.encode(request.getValue()));
             userRepository.save(users);
             userKCLService.resetPassword(userId,request);
             return "Reset successful";
@@ -413,13 +418,23 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Page<UserResponse> searchUsers(SearchRequest searchRequest) {
-        Pageable pageable = PageRequest.of(searchRequest.getPage(), searchRequest.getSize());
+    public List<UserResponse> searchUsers(UserSearchRequest request) {
+        List<Users> users = userRepositoryCustom.search(request);
 
-        Page<Users> userPage = userRepository.findByKeyword(searchRequest.getKeyword(), pageable);
+        if (users.isEmpty()) {
+            return Collections.emptyList();
+        }
 
-        return userPage.map(user -> new UserResponse(user.getId(), user.getFullName(), user.getEmail(),user.getRoles(),user.getImage_url()));
+        return users.stream()
+                .map(user -> new UserResponse(
+                        user.getId(),
+                        user.getFullName(),
+                        user.getEmail(),
+                        user.getRoles(),
+                        user.getImage_url()))
+                .collect(Collectors.toList());
     }
+
 
 
     public String generateOTP() {

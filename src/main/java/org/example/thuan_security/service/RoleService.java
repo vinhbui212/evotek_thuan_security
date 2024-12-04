@@ -11,6 +11,7 @@ import org.example.thuan_security.repository.PermissionRoleRepository;
 import org.example.thuan_security.repository.PermissionsRepository;
 import org.example.thuan_security.repository.RoleRepository;
 import org.example.thuan_security.repository.UserRepository;
+import org.example.thuan_security.request.RoleRequest;
 import org.example.thuan_security.request.SearchRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,15 +33,15 @@ public class RoleService {
     private final PermissionsRepository permissionRepository;
     private final UserRepository userRepository;
     private final PermissionRoleRepository permissionRoleRepository;
-    public Roles createRole(String name) {
+    public Roles createRole(RoleRequest request) {
         Roles role = new Roles();
-        role.setName(name);
+        role.setName(request.getName());
         return roleRepository.save(role);
     }
 
-    public Roles updateRole(Long id, String name) {
+    public Roles updateRole(Long id,RoleRequest request) {
         Roles role = roleRepository.findById(id).orElseThrow(() -> new RuntimeException("Role not found"));
-        role.setName(name);
+        role.setName(request.getName());
         return roleRepository.save(role);
     }
 
@@ -82,7 +83,7 @@ public class RoleService {
 
         Page<Roles> roles = roleRepository.findAll(sortedPageable);
         if (roles.isEmpty()) {
-            System.out.println("No users found.");
+            log.info("No users found.");
         }
         return roles;
     }

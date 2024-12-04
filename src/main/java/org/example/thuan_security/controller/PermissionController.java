@@ -2,8 +2,10 @@ package org.example.thuan_security.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.example.thuan_security.model.Permissions;
+import org.example.thuan_security.request.PermissionRequest;
 import org.example.thuan_security.request.SearchRequest;
 import org.example.thuan_security.service.PermissionService;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,16 +23,15 @@ public class PermissionController {
 
     @PreAuthorize("hasPermission('permission','CREATE')")
     @PostMapping
-    public ResponseEntity<Permissions> createPermission(@RequestParam String name,
-    @RequestParam String scope, @RequestParam String resource ) {
-        Permissions permission = permissionService.createPermission(name, scope, resource);
+    public ResponseEntity<Permissions> createPermission(@RequestBody PermissionRequest permissionRequest) {
+        Permissions permission = permissionService.createPermission(permissionRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(permission);
     }
 
     @PreAuthorize("hasPermission('permission','UPDATE')")
     @PutMapping("/{id}")
-    public ResponseEntity<Permissions> updatePermission(@PathVariable Long id, @RequestParam String name,@RequestParam String scope, @RequestParam String resource) {
-        Permissions updatedPermission = permissionService.updatePermission(id, name, scope, resource);
+    public ResponseEntity<Permissions> updatePermission(@PathVariable Long id, @RequestBody PermissionRequest permissionRequest) {
+        Permissions updatedPermission = permissionService.updatePermission(id, permissionRequest);
         return ResponseEntity.ok(updatedPermission);
     }
 
@@ -43,7 +44,7 @@ public class PermissionController {
 
     @PreAuthorize("hasPermission('permission','READ')")
     @GetMapping
-    public ResponseEntity<Page<Permissions>> getAllPermissions(@RequestBody SearchRequest searchRequest) {
+    public ResponseEntity<Page<Permissions>> getAllPermissions(@ParameterObject SearchRequest searchRequest) {
         Page<Permissions> permissions = permissionService.getAllPermissions(searchRequest);
         return ResponseEntity.ok(permissions);
     }

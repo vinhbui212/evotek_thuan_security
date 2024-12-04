@@ -10,11 +10,13 @@ import org.example.thuan_security.model.Users;
 import org.example.thuan_security.request.ChangePasswordRequest;
 import org.example.thuan_security.request.RegisterRequest;
 import org.example.thuan_security.request.SearchRequest;
+import org.example.thuan_security.request.UserSearchRequest;
 import org.example.thuan_security.response.ApiResponse;
 import org.example.thuan_security.response.UserResponse;
 import org.example.thuan_security.service.UserActivityLogService;
 import org.example.thuan_security.service.factory.DeleteStraegy;
 import org.example.thuan_security.service.user.UserService;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -112,7 +114,7 @@ public class UserController {
 
     @PreAuthorize("hasPermission('user','READ')")
     @GetMapping("/all")
-    public Page<UserResponse> getAllUsers(@RequestBody SearchRequest searchRequest) {
+    public Page<UserResponse> getAllUsers(@ParameterObject SearchRequest searchRequest) {
         return userService.getAllUsers(searchRequest);
     }
 
@@ -123,11 +125,9 @@ public class UserController {
     }
 
     @GetMapping("/search")
-    public Page<UserResponse> searchUsers(
-            @RequestBody SearchRequest searchRequest) {
+    public List<UserResponse> searchUsers(
+            @ParameterObject UserSearchRequest searchRequest) {
 
-
-        // Gọi phương thức searchUsers từ Service
         return userService.searchUsers(searchRequest);
     }
 }

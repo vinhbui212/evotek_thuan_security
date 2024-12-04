@@ -28,7 +28,6 @@ public class RegisterRequest {
     String firstName;
     String lastName;
 
-    @JsonSerialize(using = CustomLocalDateSerializer.class)
     LocalDate dob;
     boolean enabled;
 

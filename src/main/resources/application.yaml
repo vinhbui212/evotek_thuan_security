@@ -76,4 +76,8 @@ keycloak:
       title: IAM Service 2 API document
       server: http://localhost:8081/
 
+logging:
+  file:
+    path: logs/
+    name: logs/application.log
 
