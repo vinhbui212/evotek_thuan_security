@@ -14,4 +14,6 @@ import java.time.LocalDate;
 public class UserSearchRequest extends PagingRequest {
    private String keyword;
    private String sortBy;
+   private String email;
+   private String createAt;
 }

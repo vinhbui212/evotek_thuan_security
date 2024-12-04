@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.thuan_security.config.JwtAuthenticationFilter;
 import org.example.thuan_security.config.JwtTokenProvider;
-import org.example.thuan_security.model.Users;
 import org.example.thuan_security.request.ChangePasswordRequest;
 import org.example.thuan_security.request.RegisterRequest;
 import org.example.thuan_security.request.SearchRequest;
@@ -14,18 +13,15 @@ import org.example.thuan_security.request.UserSearchRequest;
 import org.example.thuan_security.response.ApiResponse;
 import org.example.thuan_security.response.UserResponse;
 import org.example.thuan_security.service.UserActivityLogService;
-import org.example.thuan_security.service.factory.DeleteStraegy;
+import org.example.thuan_security.service.factory.LockStrategy;
 import org.example.thuan_security.service.user.UserService;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -47,7 +43,7 @@ public class UserController {
     @Autowired
     private UserActivityLogService logService;
     @Autowired
-    private DeleteStraegy deleteStraegy;
+    private LockStrategy deleteStraegy;
 
     @GetMapping("/info")
     public ResponseEntity<UserResponse> getUserInfo(HttpServletRequest request) {

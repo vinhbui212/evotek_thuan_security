@@ -49,12 +49,23 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
         sql.append(" where e.deleted = false");
         if (StringUtils.isNotBlank(request.getKeyword())) {
             sql.append(
-                    " and ( lower(e.email) like :keyword"
-                            + " or lower(e.fullName) like :keyword"
+                    " and (   lower(e.email) like :keyword" +
+                            " or lower(e.fullName) like :keyword"
                              + " OR lower(to_char(e.createdAt, 'YYYY-MM-DD HH24:MI:SS')) LIKE :keyword"
                             + " or lower(e.userId) like :keyword ) ");
             values.put("keyword", SqlUtils.encodeKeyword(request.getKeyword()));
         }
+
+        if (StringUtils.isNotBlank(request.getEmail())) {
+            log.info(request.getEmail());
+            sql.append(" and lower(e.email) like :email ");
+            values.put("email", SqlUtils.encodeKeyword(request.getEmail()));
+        }
+        if (StringUtils.isNotBlank(request.getCreateAt())) {
+            sql.append(" and lower(to_char(e.createdAt, 'YYYY-MM-DD HH24:MI:SS')) LIKE :createAt ");
+            values.put("createAt", SqlUtils.encodeKeyword(request.getCreateAt()));
+        }
+
 
         return sql.toString();
     }
