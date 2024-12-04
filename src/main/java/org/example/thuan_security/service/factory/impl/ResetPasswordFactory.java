@@ -26,11 +26,11 @@ public class ResetPasswordFactory implements ResetPasswordStrategy {
         switch (loginType) {
             case KEYCLOAK:
                 userKCLService.resetPassword(userId, request);
-                return "Deleted KL";
+                return "Reset Pass KL";
             case DB:
             default:
                 userService.resetPassword(userId, request);
-                return "Deleted DB";
+                return "Reset Pass DB";
 
         }
     }

@@ -15,6 +15,7 @@ import org.example.thuan_security.request.RegisterRequest;
 import org.example.thuan_security.response.*;
 import org.example.thuan_security.service.*;
 import org.example.thuan_security.service.factory.ResetPasswordStrategy;
+import org.example.thuan_security.service.factory.impl.RegisterFactory;
 import org.example.thuan_security.service.user.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

@@ -10,10 +10,8 @@ import org.example.thuan_security.model.Roles;
 import org.example.thuan_security.model.Users;
 import org.example.thuan_security.repository.RoleRepository;
 import org.example.thuan_security.repository.UserRepository;
-import org.example.thuan_security.request.ChangePasswordRequest;
-import org.example.thuan_security.request.LoginRequest;
-import org.example.thuan_security.request.RegisterRequest;
-import org.example.thuan_security.request.ResetPasswordRequest;
+import org.example.thuan_security.repository.UserRepositoryCustom;
+import org.example.thuan_security.request.*;
 import org.example.thuan_security.response.*;
 import org.example.thuan_security.service.*;
 import org.example.thuan_security.service.keycloak.UserKCLService;
@@ -35,6 +33,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -56,6 +55,8 @@ public class UserServiceImpl implements UserService {
     private RefreshTokenService refreshTokenService;
     @Autowired
     private UserKCLService userKCLService;
+    @Autowired
+    private UserRepositoryCustom userRepositoryCustom;
     @Value("${keycloak.enabled}")
     private boolean isKeycloakEnabled;
 
@@ -156,6 +157,7 @@ public class UserServiceImpl implements UserService {
             newUser.setRoles(Collections.singleton(roleName));
             String fullname = registerRequest.getFirstName() + " " + registerRequest.getLastName();
             newUser.setFullName(fullname);
+            newUser.setDob(registerRequest.getDob());
             userRepository.save(newUser);
             String verificationLink = "http://localhost:8081/api/auth/verifiedAccount?email=" + registerRequest.getEmail();
             emailService.sendMail(
@@ -223,18 +225,56 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ApiResponse updateUserInfo(String token, UserResponse userResponse) {
-        String email = jwtTokenProvider.extractClaims(token);
-        try {
-            Users users = userRepository.findByEmail(email);
-            users.setFullName(userResponse.getFullName());
-            userRepository.save(users);
-            ApiResponse apiResponse = new ApiResponse<>(200, "Updated", 1, null);
-            return apiResponse;
-        } catch (Exception e) {
-            return new ApiResponse<>(404, "Empty name", 0, null);
+        if (isKeycloakEnabled) {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            Object principal = authentication.getPrincipal();
 
+            // Kiểm tra xem principal có phải là Jwt không
+            if (principal instanceof Jwt) {
+                Jwt jwt = (Jwt) principal;
+                log.info("JWT Token: " + jwt.toString());
+
+                String email = jwt.getClaimAsString("email");
+                if (email == null || email.isEmpty()) {
+                    return new ApiResponse<>(400, "Email not found in JWT", 0, null);
+                }
+                log.info("User email: " + email);
+
+                // Cập nhật thông tin người dùng
+                Users users = userRepository.findByEmail(email);
+                if (users != null) {
+                    users.setFullName(userResponse.getFullName());
+                    userRepository.save(users);
+                    return new ApiResponse<>(200, "Updated", 1, null);
+                } else {
+                    return new ApiResponse<>(404, "User not found", 0, null);
+                }
+            }
+        } else {
+            // Xử lý với token ngoài Keycloak
+            String email = jwtTokenProvider.extractClaims(token);
+            if (email == null || email.isEmpty()) {
+                return new ApiResponse<>(400, "Invalid token or email not found", 0, null);
+            }
+
+            try {
+                Users users = userRepository.findByEmail(email);
+                if (users != null) {
+                    users.setFullName(userResponse.getFullName());
+                    userRepository.save(users);
+                    return new ApiResponse<>(200, "Updated", 1, null);
+                } else {
+                    return new ApiResponse<>(404, "User not found", 0, null);
+                }
+            } catch (Exception e) {
+                log.error("Error updating user: ", e);
+                return new ApiResponse<>(500, "Internal server error", 0, null);
+            }
         }
+
+        return new ApiResponse<>(400, "Unknown error", 0, null);
     }
+
 
     @Override
     public boolean isVerifiedAccount(String email) {
@@ -341,9 +381,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public String resetPassword(String userId, ResetPasswordRequest request) {
-        Users users=userRepository.findByUserId(userId);
+        Users users=userRepository.findById(Long.valueOf(userId)).orElseThrow();
         if (users != null) {
-            users.setPassword(request.getValue());
+            users.setPassword(passwordEncoder.encode(request.getValue()));
             userRepository.save(users);
             userKCLService.resetPassword(userId,request);
             return "Reset successful";
@@ -352,22 +392,49 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Page<Users> getAllUsers(Pageable pageable) {
+    public Page<UserResponse> getAllUsers(SearchRequest searchRequest) {
 
-        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Order.asc("id")));
-        return userRepository.findAll(sortedPageable);
+        Pageable sortedPageable = createPageable(searchRequest);
 
+        Page<Users> usersPage = userRepository.findAll(sortedPageable);
+        if (usersPage.isEmpty()) {
+            System.out.println("No users found.");
+        }
+
+        return convertToUserResponse(usersPage);
     }
+
 
     @Override
     public String deleteUser(Long userId) {
         Users users=userRepository.findById(userId).orElseThrow();
-        if(users!=null) {
+        log.info(users.getFullName());
+        if(users!=null && !users.isDeleted()) {
             users.setDeleted(true);
+            userRepository.save(users);
             return "Deleted ok";
         }
-        else return "User does not exist";
+        else return "User already deleted";
     }
+
+    @Override
+    public List<UserResponse> searchUsers(UserSearchRequest request) {
+        List<Users> users = userRepositoryCustom.search(request);
+
+        if (users.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return users.stream()
+                .map(user -> new UserResponse(
+                        user.getId(),
+                        user.getFullName(),
+                        user.getEmail(),
+                        user.getRoles(),
+                        user.getImage_url()))
+                .collect(Collectors.toList());
+    }
+
 
 
     public String generateOTP() {
@@ -399,12 +466,6 @@ public class UserServiceImpl implements UserService {
         return false;
     }
 
-//    public boolean isPasswordValid(RegisterRequest registerRequest) {
-//        if (!registerRequest.getPassword().equals(registerRequest.getConfirmPassword())) {
-//            return true;
-//        }
-//        return false;
-//    }
 
     public boolean isEmailValid(RegisterRequest registerRequest) {
         if (userRepository.findByEmail(registerRequest.getEmail()) == null) {
@@ -412,4 +473,29 @@ public class UserServiceImpl implements UserService {
         }
         return false;
     }
+
+    public Page<UserResponse> convertToUserResponse(Page<Users> usersPage) {
+        return usersPage.map(user -> new UserResponse(
+                user.getId(),
+                user.getFullName(),
+                user.getEmail(),
+                user.getRoles(),
+                user.getImage_url()
+        ));
+    }
+    public static Pageable createPageable(SearchRequest searchRequest) {
+        if ("desc".equalsIgnoreCase(searchRequest.getSortDirection())) {
+            return PageRequest.of(
+                    searchRequest.getPage(),
+                    searchRequest.getSize(),
+                    Sort.by(Sort.Order.desc(searchRequest.getKeyword()))
+            );
+        }
+        return PageRequest.of(
+                searchRequest.getPage(),
+                searchRequest.getSize(),
+                Sort.by(Sort.Order.asc(searchRequest.getKeyword()))
+        );
+    }
+
 }

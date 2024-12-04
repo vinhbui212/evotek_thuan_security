@@ -20,5 +20,4 @@ public class Permissions extends AuditableEntity {
     private String name;
     private String scope;
     private String resource;
-
 }

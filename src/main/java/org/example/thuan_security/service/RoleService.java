@@ -1,20 +1,28 @@
 package org.example.thuan_security.service;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.thuan_security.model.Permissions;
+import org.example.thuan_security.model.PermissionRole;
 import org.example.thuan_security.model.Roles;
 import org.example.thuan_security.model.Users;
+import org.example.thuan_security.repository.PermissionRoleRepository;
 import org.example.thuan_security.repository.PermissionsRepository;
 import org.example.thuan_security.repository.RoleRepository;
 import org.example.thuan_security.repository.UserRepository;
+import org.example.thuan_security.request.RoleRequest;
+import org.example.thuan_security.request.SearchRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+
+import static org.example.thuan_security.service.user.UserServiceImpl.createPageable;
 
 @Service
 @RequiredArgsConstructor
@@ -24,16 +32,16 @@ public class RoleService {
     private final RoleRepository roleRepository;
     private final PermissionsRepository permissionRepository;
     private final UserRepository userRepository;
-
-    public Roles createRole(String name) {
+    private final PermissionRoleRepository permissionRoleRepository;
+    public Roles createRole(RoleRequest request) {
         Roles role = new Roles();
-        role.setName(name);
+        role.setName(request.getName());
         return roleRepository.save(role);
     }
 
-    public Roles updateRole(Long id, String name) {
+    public Roles updateRole(Long id,RoleRequest request) {
         Roles role = roleRepository.findById(id).orElseThrow(() -> new RuntimeException("Role not found"));
-        role.setName(name);
+        role.setName(request.getName());
         return roleRepository.save(role);
     }
 
@@ -41,30 +49,25 @@ public class RoleService {
         roleRepository.deleteById(id);
     }
 
-    public void assignPermissionsToRole(Long roleId, Long permissionIds) {
+    @Transactional
+    public void assignPermissionsToRole(Long roleId,Long permissionIds) {
         Roles role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new RuntimeException("Role not found"));
 
 
-        Permissions permission = permissionRepository.findById(permissionIds)
-                .orElseThrow(() -> new RuntimeException("Permission not found"));
+            Permissions permission = permissionRepository.findById(permissionIds)
+                    .orElseThrow(() -> new RuntimeException("Permission not found"));
 
-        log.info(permission.getName());
+            PermissionRole permissionRole = new PermissionRole();
+            permissionRole.setRoleId(String.valueOf(role.getId()));
+            permissionRole.setPermissionId(String.valueOf(permission.getId()));
 
+            System.out.println("Saving PermissionRole: " + permissionRole);
 
-        Set<String> permissionsSet = role.getPermissions();
-        if (permissionsSet == null) {
-            permissionsSet = new HashSet<>();
-        }
-
-        permissionsSet.add(permission.getName());
-
-        role.setPermissions(permissionsSet);
-
-
-        roleRepository.save(role);
+            permissionRoleRepository.save(permissionRole);
 
     }
+
 
     public void assignRoleToUser(Long id, Long roleId) {
         Users users = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
@@ -74,5 +77,52 @@ public class RoleService {
         userRepository.save(users);
 
     }
+
+    public Page<Roles> getAllRoles(SearchRequest searchRequest) {
+        Pageable sortedPageable = createPageable(searchRequest);
+
+        Page<Roles> roles = roleRepository.findAll(sortedPageable);
+        if (roles.isEmpty()) {
+            log.info("No users found.");
+        }
+        return roles;
+    }
 }
 
+
+
+
+//@Service
+//@RequiredArgsConstructor
+//public class RolePermissionService {
+//    private final RoleRepository roleRepository;
+//    private final PermissionRepository permissionRepository;
+//    private final RolePermissionRepository rolePermissionRepository;
+//
+//    @PreAuthorize("hasRole('ADMIN')")
+//    public boolean assignPermission(String roleId, String permissionId, List<PermissionScope> scopes){
+//        roleRepository.findById(roleId).orElseThrow(()-> new AppExceptions(ErrorCode.ROLE_NOTFOUND));
+//        permissionRepository.findById(roleId).orElseThrow(()-> new AppExceptions(ErrorCode.PERMISSION_NOTFOUND));
+//        for(PermissionScope item : scopes){
+//            boolean foundRolePermission = rolePermissionRepository
+//                    .existsByRoleIdAndPermissionIdAndScope(roleId, permissionId, item);
+//            if(!foundRolePermission){
+//                rolePermissionRepository.save(RolePermission.builder()
+//                        .roleId(roleId)
+//                        .permissionId(permissionId)
+//                        .scope(item)
+//                        .build());
+//            }
+//        }
+//
+//        return true;
+//    }
+//
+//    // un assign
+//    public boolean unAssignPermission(String roleId, String permissionId) {
+//        RolePermission rolePermission = rolePermissionRepository.findByRoleIdAndPermissionId(roleId, permissionId)
+//                .orElseThrow(() -> new AppExceptions(ErrorCode.ROLE_PERMISSION_NOTFOUND));
+//        rolePermissionRepository.delete(rolePermission);
+//        return true;
+//    }
+//}
