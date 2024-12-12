@@ -27,9 +27,9 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/public/files")
+@RequestMapping("/api/private/files")
 @RequiredArgsConstructor
-public class FileController {
+public class FileControllerPrivate {
 
     private final FileService fileService;
     private final FileRepository fileRepository;
@@ -59,7 +59,7 @@ public class FileController {
         }
     }
 
-    
+
     @PostMapping("/uploadMultiple")
     public ResponseEntity<ApiResponse> uploadMultipleFiles(
             @RequestParam("file") List<MultipartFile> file,  // List of MultipartFile

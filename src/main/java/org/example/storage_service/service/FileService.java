@@ -31,6 +31,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -41,11 +42,11 @@ import java.util.stream.Collectors;
 public class FileService {
 
     private final org.example.storage_service.repository.FileRepository fileRepository;
-//    private final FileRepositoryImpl fileRepositoryImpl;
+    //    private final FileRepositoryImpl fileRepositoryImpl;
     private final FileRepositoryCustom fileRepositoryCustom;
-    private String uploadDir="uploads";
+    private String uploadDir = "uploads";
 
-    public org.example.storage_service.entity.File uploadFile(MultipartFile file, boolean visibility, String version) throws IOException {
+    public org.example.storage_service.entity.File uploadFile(MultipartFile file, boolean visibility, String version, Long userId) throws IOException {
         String currentDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
         Path uploadPath = Paths.get(uploadDir, currentDate);
         if (!Files.exists(uploadPath)) {
@@ -57,6 +58,7 @@ public class FileService {
 
         return fileRepository.save(org.example.storage_service.entity.File.builder()
                 .fileName(fileName)
+                .ownerId(userId)
                 .fileType(file.getContentType())
                 .fileSize(String.valueOf(file.getSize()))
                 .filePath(filePath.toString())
@@ -64,15 +66,26 @@ public class FileService {
                 .build());
     }
 
-    public String uploadFiles(List<MultipartFile> files, boolean visibility, String version) throws IOException {
+    public List<File> uploadFiles(List<MultipartFile> files, boolean visibility, String version, Long userId) throws IOException {
         if (files.isEmpty()) {
-            return "Files empty";
+            return new ArrayList<>(); // Return an empty list if no files are provided
         }
+
+        List<File> uploadedFiles = new ArrayList<>();
         for (MultipartFile file : files) {
-            uploadFile(file, visibility, version);
+            try {
+                // Upload a single file and get the File entity returned from uploadFile
+                File uploadedFile = uploadFile(file, visibility, version, userId);
+                uploadedFiles.add(uploadedFile); // Add the uploaded file to the list
+            } catch (IOException e) {
+                // Handle the error, e.g., log it
+                System.err.println("Error uploading file " + file.getOriginalFilename() + ": " + e.getMessage());
+                // Optionally, rethrow the exception or continue based on your requirements
+            }
         }
-        return "Upload file success";
+        return uploadedFiles; // Return the list of uploaded files
     }
+
 
     public Resource getFile(Long fileId) throws IOException {
         org.example.storage_service.entity.File fileEntity = fileRepository.findById(fileId).orElseThrow(() -> new RuntimeException("File not found"));

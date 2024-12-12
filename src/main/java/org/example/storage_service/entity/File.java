@@ -20,7 +20,7 @@ public class File extends AuditableEntity {
     private String filePath;
     private String ratio;
     private String fileSize;
-    private int ownerId;
+    private Long ownerId;
     private String accessType;
     private boolean deleted = false;
     private boolean visible =true;

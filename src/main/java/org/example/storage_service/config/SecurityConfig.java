@@ -34,7 +34,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeRequests(author-> {
-                author.requestMatchers("/public/**").permitAll();
+                author.requestMatchers("/api/public/**").permitAll();
                 author.anyRequest().authenticated();
                 })
                 .oauth2ResourceServer(oauth2 -> oauth2.authenticationManagerResolver(jwkResolver(jwtProperties)));
